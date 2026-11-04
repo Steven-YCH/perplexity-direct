@@ -96,6 +96,31 @@ def _save_media(result: AskResult, prefix: str, client: PerplexityWebClient) -> 
     return saved
 
 
+def cmd_auth(args: argparse.Namespace) -> int:
+    """Import session cookie from a local browser profile into .env."""
+    if args.from_chromium:
+        browser = "chromium"
+    elif args.from_edge:
+        browser = "edge"
+    else:
+        browser = "chrome"
+
+    # Allow running as `python cli.py auth` without installing as a package.
+    scripts_dir = ROOT / "scripts"
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    from export_chrome_cookies import export_session_cookie
+
+    session = export_session_cookie(
+        browser=browser,
+        profile=args.profile,
+        env_file=Path(args.env_file).expanduser() if args.env_file else ROOT / ".env",
+    )
+    print(f"PPLX_COOKIE updated from browser={browser} (len={len(session)})")
+    print("Validate with: python cli.py whoami")
+    return 0
+
+
 def cmd_whoami(_: argparse.Namespace) -> int:
     with PerplexityWebClient() as client:
         info = client.whoami()
@@ -197,6 +222,38 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--model", default=None, help="model_preference override")
     p.add_argument("--mode", default=None, help="concise|copilot")
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    auth = sub.add_parser(
+        "auth",
+        help="Import __Secure-next-auth.session-token from a local browser into .env",
+    )
+    auth_from = auth.add_mutually_exclusive_group(required=True)
+    auth_from.add_argument(
+        "--from-chrome",
+        action="store_true",
+        help="Read cookies from Google Chrome",
+    )
+    auth_from.add_argument(
+        "--from-chromium",
+        action="store_true",
+        help="Read cookies from Chromium",
+    )
+    auth_from.add_argument(
+        "--from-edge",
+        action="store_true",
+        help="Read cookies from Microsoft Edge",
+    )
+    auth.add_argument(
+        "--profile",
+        default="Default",
+        help="Browser profile directory name (default: Default)",
+    )
+    auth.add_argument(
+        "--env-file",
+        default=str(ROOT / ".env"),
+        help="Env file to update (default: ./.env)",
+    )
+    auth.set_defaults(func=cmd_auth)
 
     w = sub.add_parser("whoami", help="Validate cookie / show subscription status")
     w.set_defaults(func=cmd_whoami)

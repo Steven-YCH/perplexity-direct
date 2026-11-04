@@ -44,6 +44,21 @@ cp .env.example .env   # Windows: copy .env.example .env
 You *can* skip the venv and install into your global/user Python, but a venv
 avoids package conflicts with other projects.
 
+### Get the cookie automatically from Chrome (recommended)
+
+If you are already signed in to https://www.perplexity.ai in Chrome/Chromium on this machine:
+
+```bash
+python cli.py auth --from-chrome
+# or: python scripts/export_chrome_cookies.py
+# or: python cli.py auth --from-chromium
+```
+
+This writes `PPLX_COOKIE` into `.env` from `__Secure-next-auth.session-token`.
+Re-run whenever the web session expires.
+
+### Or paste the cookie manually
+
 Edit `.env` and set `PPLX_COOKIE` to the **value only** of:
 
 `__Secure-next-auth.session-token`
